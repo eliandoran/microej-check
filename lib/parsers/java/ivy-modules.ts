@@ -2,13 +2,15 @@ import glob from "fast-glob";
 import path from "path";
 import fs from "fs";
 import { XMLParser } from "fast-xml-parser";
+import { Module, Dependency } from "../../models/module";
+import { ProjectStructure } from "../../models/context";
 
-export default function getIvyModules(baseDir) {
+export default function getIvyModules(baseDir: string): ProjectStructure {
     const filePattern = "**/module.ivy";
     const moduleIvyPattern = path.join(baseDir, filePattern);
     const moduleIvyPaths = glob.sync(moduleIvyPattern);
 
-    const allModules = [];
+    const allModules: Module[] = [];
     for (const ivyModulePath of moduleIvyPaths) {
         allModules.push(parseIvyModule(ivyModulePath));
     }
@@ -20,20 +22,20 @@ export default function getIvyModules(baseDir) {
     };
 }
 
-function groupModulesByOrganisation(allModules) {
-    const result = {};
+function groupModulesByOrganisation(allModules: Module[]): Map<string, Map<string, Module>> {
+    const result = new Map<string, Map<string, Module>>();
     for (const module of allModules) {        
         const org = module.organisation;
-        if (result[org] === undefined) {
-            result[org] = {};
+        if (!result.has(org)) {
+            result.set(org, new Map<string, Module>());
         }
-        result[org][module.name] = module;
+        result.get(org).set(module.name, module);
     }
 
     return result;
 }
 
-function parseIvyModule(ivyModulePath) {
+function parseIvyModule(ivyModulePath: string): Module {
     const ivyModuleContent = fs.readFileSync(ivyModulePath).toString("utf8");
     const parser = new XMLParser({
         ignoreAttributes: false
@@ -46,7 +48,7 @@ function parseIvyModule(ivyModulePath) {
 
     // Parse dependencies.
     const dependenciesEl = ivyModuleEl.dependencies;
-    const dependencies = [];
+    const dependencies: Dependency[] = [];
 
     if (dependenciesEl !== undefined) {
         if (dependenciesEl.dependency.length > 0) {
@@ -62,15 +64,10 @@ function parseIvyModule(ivyModulePath) {
     // Parse resources.
     const baseDir = path.dirname(ivyModulePath);
 
-    return {
-        organisation,
-        name,
-        dependencies,
-        baseDir
-    };
+    return new Module(organisation, name, baseDir, dependencies);
 }
 
-function parseDependency(dependency) {
+function parseDependency(dependency: any): Dependency {
     return {
         org: dependency["@_org"],
         name: dependency["@_name"],

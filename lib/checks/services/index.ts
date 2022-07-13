@@ -1,12 +1,15 @@
 import glob from "fast-glob";
-import checkUndeclaredServiceCalls from "./undeclared-service-calls.js";
+import { Context, ProjectStructure } from "../../models/context";
+import checkUndeclaredServiceCalls from "./undeclared-service-calls";
 
 export default class ServiceResourceChecker {
 
-    constructor(context, config) {
+    private context: Context;
+    private config: any;
+
+    constructor(context: Context, config: any) {
         this.context = context;
         this.config = config;
-        this.log = context.log;
 
         if (!context.log) {
             throw "Missing log in context.";
@@ -32,7 +35,7 @@ export default class ServiceResourceChecker {
 
 }
 
-function findModules(projectPattern, projectStructure, baseDir) {
+function findModules(projectPattern: string, projectStructure: ProjectStructure, baseDir: string) {
     const projectPaths = glob.sync(projectPattern, {
         cwd: baseDir,
         onlyDirectories: true,
